@@ -1,1 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎂 Birthday Magic Ultimate</title>
 
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    color: white;
+    overflow: hidden;
+    background: radial-gradient(circle, #ff758c, #ff7eb3);
+}
+
+h1 {
+    margin-top: 20px;
+}
+
+/* Cake */
+.cake {
+    position: relative;
+    margin: 100px auto;
+    width: 240px;
+    height: 150px;
+    background: #6b3e26;
+    border-radius: 15px;
+}
+
+.candle {
+    position: absolute;
+    top: -60px;
+    left: 110px;
+    width: 20px;
+    height: 60px;
+    background: white;
+}
+
+.flame {
+    position: absolute;
+    top: -22px;
+    left: 3px;
+    width: 15px;
+    height: 20px;
+    background: orange;
+    border-radius: 50%;
+    box-shadow: 0 0 20px yellow;
+    animation: flicker 0.2s infinite;
+}
+
+@keyframes flicker {
+    50% { transform: scale(1.3); }
+}
+
+/* Button */
+button {
+    padding: 12px 25px;
+    font-size: 18px;
+    border: none;
+    background: #ff4081;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+#message {
+    font-size: 28px;
+    display: none;
+}
+
+/* Balloons */
+.balloon {
+    position: absolute;
+    bottom: -100px;
+    width: 40px;
+    height: 50px;
+    border-radius: 50%;
+    animation: float linear infinite;
+}
+
+@keyframes float {
+    to { transform: translateY(-900px); }
+}
+
+/* Fireworks */
+.firework {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background: white;
+    border-radius: 50%;
+    animation: explode 1s ease-out forwards;
+}
+
+@keyframes explode {
+    to {
+        transform: translate(var(--x), var(--y));
+        opacity: 0;
+    }
+}
+
+/* Camera */
+video, canvas {
+    display: none;
+    margin-top: 10px;
+    border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎂 Blow the Candle!</h1>
+
+<div class="cake">
+    <div class="candle">
+        <div class="flame" id="flame"></div>
+    </div>
+</div>
+
+<button onclick="startMic()">Start 🎤</button>
+<button onclick="shareWish()">📲 Share</button>
+
+<div id="message"></div>
+
+<!-- Music -->
+<audio id="song" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"></audio>
+
+<!-- Camera -->
+<video id="video" width="200" autoplay></video>
+<canvas id="canvas" width="200" height="150"></canvas>
+
+<script>
+let analyser, audioContext, mic;
+
+// Name
+let name = prompt("Enter Name:");
+if(!name) name = "Friend";
+
+// Start mic
+async function startMic() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioContext = new AudioContext();
+    analyser = audioContext.createAnalyser();
+    mic = audioContext.createMediaStreamSource(stream);
+    mic.connect(analyser);
+    analyser.fftSize = 512;
+    detect();
+}
+
+// Detect blow
+function detect() {
+    const data = new Uint8Array(analyser.fftSize);
+
+    function check() {
+        analyser.getByteTimeDomainData(data);
+
+        let sum = 0;
+        for(let i=0;i<data.length;i++){
+            let v = (data[i]-128)/128;
+            sum += v*v;
+        }
+
+        let volume = Math.sqrt(sum/data.length);
+
+        if(volume > 0.10){
+            celebrate();
+        } else {
+            requestAnimationFrame(check);
+        }
+    }
+    check();
+}
+
+// Celebration
+function celebrate() {
+    document.getElementById("flame").style.display = "none";
+
+    let msg = document.getElementById("message");
+    msg.style.display = "block";
+    msg.innerHTML = "🎉 Happy Birthday " + name + "! 🎉";
+
+    document.getElementById("song").play();
+
+    balloons();
+    fireworks();
+    startCamera();
+}
+
+// Balloons
+function balloons(){
+    for(let i=0;i<25;i++){
+        let b = document.createElement("div");
+        b.className = "balloon";
+        b.style.left = Math.random()*100+"vw";
+        b.style.background = randomColor();
+        b.style.animationDuration = (3+Math.random()*3)+"s";
+        document.body.appendChild(b);
+    }
+}
+
+// Fireworks
+function fireworks(){
+    for(let i=0;i<50;i++){
+        let f = document.createElement("div");
+        f.className = "firework";
+        f.style.left = "50vw";
+        f.style.top = "40vh";
+        f.style.setProperty('--x', (Math.random()*200-100)+'px');
+        f.style.setProperty('--y', (Math.random()*200-100)+'px');
+        f.style.background = randomColor();
+        document.body.appendChild(f);
+    }
+}
+
+// Camera
+async function startCamera(){
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const video = document.getElementById("video");
+    video.style.display = "block";
+    video.srcObject = stream;
+
+    setTimeout(()=>{
+        let canvas = document.getElementById("canvas");
+        canvas.style.display = "block";
+        let ctx = canvas.getContext("2d");
+        ctx.drawImage(video,0,0,200,150);
+    },3000);
+}
+
+// Share
+function shareWish(){
+    const text = "🎂 Happy Birthday " + name + "!";
+    if(navigator.share){
+        navigator.share({ text });
+    } else {
+        alert(text);
+    }
+}
+
+// Colors
+function randomColor(){
+    const c=["red","blue","yellow","green","purple","orange"];
+    return c[Math.floor(Math.random()*c.length)];
+}
+</script>
+
+</body>
+</html>
